@@ -47,7 +47,7 @@ def ejecutar(comando):
             dejarDePasear()
         if comando[0] == "parquear": # PARQUEAR CUADRA
             cuadra = comando[1]
-            t2 = Thread(target=parquear, args=[cuadra])
+            t2 = Thread(target=parquear, args=[getPosicion(cuadra)])
             t2.daemon = True
             t2.start()
         if comando[0] == "mostrar":
@@ -55,13 +55,21 @@ def ejecutar(comando):
                 activarMostrarRecorrido()
             elif comando[1] == "off":
                 desactivarMostrarRecorrido()
+                borrarRecorrido()
+                imprimirTablero(getPosicion('T'))
         if comando[0] == "ruta":
             if comando[1] == "on":
                 activarMostrarRuta()
             elif comando[1] == "off":
                 desactivarMostrarRuta()
+                borrarRuta()
+                imprimirTablero(getPosicion('T'))
         if comando[0] == "animar":
             cambiarVelocidad(int(comando[1]))
+        if comando[0] == "buscar":
+            t4 = Thread(target=buscarClientes)
+            t4.daemon = True
+            t4.start()
 
 
 def getTablero():
@@ -236,6 +244,8 @@ def desactivarMostrarRuta():
 
 def pasear():
     global tablero
+    borrarRuta()
+    borrarRecorrido()
     explorados = []
 
     elegido = getPosicion('T')
@@ -247,9 +257,6 @@ def pasear():
         explorados.append(posActual)
         time.sleep(velocidadAnimacion/1000)
         imprimirTablero(posActual)
-        global posTaxi
-        posTaxi = posActual
-
         vecinos = getPosicionesVisitables(posActual)
         if todosLosVecinosExplorados(vecinos, explorados):
             del explorados[:]
@@ -257,6 +264,88 @@ def pasear():
         elegido = vecinos[randint(0,len(vecinos)-1)]
         while(elegido in explorados):
             elegido = vecinos[randint(0, len(vecinos) - 1)]
+
+def buscarClientes():
+    global tablero
+    explorados = []
+    elegido = getPosicion('T')
+    global seguirBuscando
+    seguirBuscando = True
+
+    while seguirBuscando:
+        posActual = elegido
+        if tablero[posActual[0]-1][posActual[1]] == 'o':
+            dejarDePasear()
+            posCliente = [posActual[0]-1,posActual[1]]
+            llevarClienteADestino(posCliente)
+            seguirBuscando = False
+            break
+
+        elif tablero[posActual[0]][posActual[1]+1] == 'o':
+            dejarDePasear()
+            posCliente = [posActual[0],posActual[1]+1]
+            llevarClienteADestino(posCliente)
+            seguirBuscando = False
+            break
+
+        elif tablero[posActual[0]+1][posActual[1]] == 'o':
+            dejarDePasear()
+            posCliente = [posActual[0]+1,posActual[1]]
+            llevarClienteADestino(posCliente)
+            seguirBuscando = False
+            break
+
+        elif tablero[posActual[0]][posActual[1]-1] == 'o':
+            dejarDePasear()
+            posCliente = [posActual[0],posActual[1]-1]
+            llevarClienteADestino(posCliente)
+            seguirBuscando = False
+            break
+
+        explorados.append(posActual)
+        time.sleep(velocidadAnimacion / 1000)
+        imprimirTablero(posActual)
+        vecinos = getPosicionesVisitables(posActual)
+        if todosLosVecinosExplorados(vecinos, explorados):
+            del explorados[:]
+
+        elegido = vecinos[randint(0, len(vecinos) - 1)]
+        while (elegido in explorados):
+            elegido = vecinos[randint(0, len(vecinos) - 1)]
+
+def getDestinoCliente(posicionCliente):
+    for cliente in listaClientes:
+        if cliente.posicion == posicionCliente:
+            return cliente.destino
+
+def getPosicionManzana(posCuadra):
+    if tablero[posCuadra[0]][posCuadra[1] + 1] in "o-":
+        if tablero[posCuadra[0]][posCuadra[1] + 2] in "o-":
+            if tablero[posCuadra[0] + 1][posCuadra[1] + 2] == '|':
+                return [posCuadra[0] + 1,posCuadra[1] + 1]
+            else:
+                return [posCuadra[0] - 1, posCuadra[1] + 1]
+        else:
+            if tablero[posCuadra[0] + 1][posCuadra[1] + 1] == '|':
+                return [posCuadra[0] + 1,posCuadra[1]]
+            else:
+                return [posCuadra[0] - 1,posCuadra[1]]
+    else:
+        if tablero[posCuadra[0]+1][posCuadra[1]] in "|":
+            return [posCuadra[0] + 1,posCuadra[1] - 1]
+        else:
+            return [posCuadra[0] - 1,posCuadra[1] - 1]
+
+def llevarClienteADestino(posicionCliente):
+    global tablero
+    global estaDejandoCliente
+    estaDejandoCliente = True
+    tablero[posicionCliente[0]][posicionCliente[1]] = '-'
+    imprimirTablero(getPosicion('T'))
+    destinoCliente = getDestinoCliente(posicionCliente)
+    print("El destino del cliente es: " + str(destinoCliente))
+    parquear(destinoCliente)
+    dejarCliente(destinoCliente)
 
 def detener():
     global detenerse
@@ -417,18 +506,48 @@ def moverseAPosicion(posDestino): #A*
                         openVecino.parent = vecino.parent
     return False
 
-def parquear(nombreCuadra):
-    detenerse = False
-    posicionActual = getPosicion('T')
-    destino = getPosicion(nombreCuadra)
-    destinoArriba = [destino[0]-2, destino[1]]
-    destinoAbajo = [destino[0]+2, destino[1]]
-    distanciaArriba = distanciaEntrePosiciones(posicionActual, destinoArriba)
-    distanciaAbajo = distanciaEntrePosiciones(posicionActual, destinoAbajo)
-    if distanciaAbajo > distanciaArriba:
-        destino = destinoArriba
+def getPosicionFrenteADestino(destino):
+    if tablero[destino[0]][destino[1] + 1] in "o-":
+        if tablero[destino[0]][destino[1] + 2] in "o-":
+            if tablero[destino[0] + 1][destino[1] + 2] == '|':
+                return [destino[0] - 1,destino[1]]
+            else:
+                return [destino[0] + 1, destino[1]]
+        else:
+            if tablero[destino[0] + 1][destino[1] + 1] == '|':
+                return [destino[0] - 1, destino[1]]
+            else:
+                return [destino[0] + 1, destino[1]]
     else:
-        destino = destinoAbajo
+        if tablero[destino[0]+1][destino[1]] in "|":
+            return [destino[0] - 1, destino[1]]
+        else:
+            return [destino[0] + 1, destino[1]]
+
+def parquear(posCuadra):
+    global detenerse
+    global tablero
+    global estaDejandoCliente
+    detenerse = False
+    borrarRuta()
+    borrarRecorrido()
+    dejarDePasear()
+    posicionActual = getPosicion('T')
+    destino = posCuadra
+    if estaDejandoCliente:
+        #ENTONCES posCuadra es la ubicación exacta donde el cliente quiere llegar
+        destino = getPosicionFrenteADestino(destino)
+        estaDejandoCliente = False
+    else:
+        # ENTONCES posCuadra es la ubicación de la manzana en sí
+        destinoArriba = [destino[0]-2, destino[1]]
+        destinoAbajo = [destino[0]+2, destino[1]]
+        distanciaArriba = distanciaEntrePosiciones(posicionActual, destinoArriba)
+        distanciaAbajo = distanciaEntrePosiciones(posicionActual, destinoAbajo)
+        if distanciaAbajo > distanciaArriba:
+            destino = destinoArriba
+        else:
+            destino = destinoAbajo
     caminoMasCorto = list(reversed(moverseAPosicion(destino)))
     #print(caminoMasCorto)
     for posicion in caminoMasCorto:
@@ -445,6 +564,13 @@ def parquear(nombreCuadra):
         else:
             borrarRecorrido()
             imprimirTablero(posicion)
+
+def dejarCliente(posCuadra): #Alternativa de pasear
+    tablero[posCuadra[0]][posCuadra[1]] = '☻'
+    imprimirTablero(getPosicion('T'))
+    time.sleep(1.5)
+    tablero[posCuadra[0]][posCuadra[1]] = '-'
+    imprimirTablero(getPosicion('T'))
 
 def getClientesOriginales():
     listaPosiciones = []
@@ -486,6 +612,9 @@ global mostrarCaminoRecorrido
 global mostrarRuta
 global velocidadAnimacion
 global detenerse
+global estaDejandoCliente
+
+estaDejandoCliente = False
 detenerse = False
 velocidadAnimacion = 500
 mostrarCaminoRecorrido = False
