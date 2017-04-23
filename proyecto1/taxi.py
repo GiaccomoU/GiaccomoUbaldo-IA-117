@@ -56,14 +56,14 @@ def ejecutar(comando):
             elif comando[1] == "off":
                 desactivarMostrarRecorrido()
                 borrarRecorrido()
-                imprimirTablero(getPosicion('T'))
+                imprimirTablero(getPosicion(simboloTaxi))
         if comando[0] == "ruta":
             if comando[1] == "on":
                 activarMostrarRuta()
             elif comando[1] == "off":
                 desactivarMostrarRuta()
                 borrarRuta()
-                imprimirTablero(getPosicion('T'))
+                imprimirTablero(getPosicion(simboloTaxi))
         if comando[0] == "animar":
             cambiarVelocidad(int(comando[1]))
         if comando[0] == "buscar":
@@ -77,7 +77,11 @@ def getTablero():
         content = f.readlines()
     # you may also want to remove whitespace characters like `\n` at the end of each line
     content = [x for x in content]
-    return llenarEspacios(content)
+    tab = llenarEspacios(content)
+    if tab == None:
+        print("ERROR DE ENTRADA: Solo puede haber un taxi (Con símbolo T)")
+    else:
+        return tab
     #return content
 
 def insertarEntre(lista, elementos, pos):
@@ -136,12 +140,15 @@ def generarTrayecto(listaDePosiciones):
         return listaDePosiciones
 
 def llenarEspacios(tablero):
+    contadorTaxis = 0
     for i in range(0, len(tablero)):
         term = False
-        #print("wat")
         linea = list(tablero[i])
         for j in range(0, len(linea)):
-            #print("khe")
+            if contadorTaxis > 1:
+                return None
+            if tablero[i][j] == 'T':
+                contadorTaxis += 1
             if term == True:
                 linea[j] = ' '
             if(tablero[i][j] == '\n'):
@@ -189,10 +196,10 @@ def imprimirTablero(posicion):
     for i in range(0, len(tablero)):
         for j in range(0, len(tablero[i])):
             if i == posicion[0] and j == posicion[1]:
-                tablero[i][j] = 'T'
-                print('T', end='')
+                tablero[i][j] = simboloTaxi
+                print(simboloTaxi, end='')
             else:
-                if tablero[i][j] == 'T':
+                if tablero[i][j] == simboloTaxi:
                     print(' ', end='')
                     tablero[i][j] = ' '
                 else:
@@ -206,10 +213,10 @@ def imprimirTableroConCamino(posicion):
     for i in range(0, len(tablero)):
         for j in range(0, len(tablero[i])):
             if i == posicion[0] and j == posicion[1]:
-                tablero[i][j] = 'T'
-                print('T', end='')
+                tablero[i][j] = simboloTaxi
+                print(simboloTaxi, end='')
             else:
-                if tablero[i][j] == 'T':
+                if tablero[i][j] == simboloTaxi:
                     print('*', end='')
                     tablero[i][j] = '*'
                 else:
@@ -248,7 +255,7 @@ def pasear():
     borrarRecorrido()
     explorados = []
 
-    elegido = getPosicion('T')
+    elegido = getPosicion(simboloTaxi)
     global seguirPaseando
     seguirPaseando = True
 
@@ -268,7 +275,7 @@ def pasear():
 def buscarClientes():
     global tablero
     explorados = []
-    elegido = getPosicion('T')
+    elegido = getPosicion(simboloTaxi)
     global seguirBuscando
     seguirBuscando = True
 
@@ -336,12 +343,28 @@ def getPosicionManzana(posCuadra):
         else:
             return [posCuadra[0] - 1,posCuadra[1] - 1]
 
+def actualizarSimboloTaxi():
+    global simboloTaxi
+    global tablero
+    for i in range(0, len(tablero)-1):
+        for j in range(0, len(tablero[i])-1):
+            if tablero[i][j] == simboloTaxiOcupado:
+                tablero[i][j] = simboloTaxiLibre
+                break
+            if tablero[i][j] == simboloTaxiLibre:
+                tablero[i][j] = simboloTaxiOcupado
+                break
+    #print("El nuevo simbolo del taxi es: " + simboloTaxi)
+
 def llevarClienteADestino(posicionCliente):
     global tablero
     global estaDejandoCliente
+    global simboloTaxi
+    simboloTaxi = simboloTaxiOcupado
+    actualizarSimboloTaxi()
     estaDejandoCliente = True
     tablero[posicionCliente[0]][posicionCliente[1]] = '-'
-    imprimirTablero(getPosicion('T'))
+    imprimirTablero(getPosicion(simboloTaxi))
     destinoCliente = getDestinoCliente(posicionCliente)
     print("El destino del cliente es: " + str(destinoCliente))
     parquear(destinoCliente)
@@ -378,7 +401,7 @@ def agregarClientesAleatorios(cantidad):
         cliente = Cliente(posicionCliente, destino)
         listaClientes.append(cliente)
         agregarClienteATablero(cliente)
-    imprimirTablero(getPosicion('T'))
+    imprimirTablero(getPosicion(simboloTaxi))
 
 def getUbicacionesPosiblesEnCuadra(nombreCuadra):
     global tablero
@@ -440,6 +463,7 @@ def getNodosVecinos(nodo):
     posVisitables = []
     fila = nodo.posicion[0]
     columna = nodo.posicion[1]
+    #print([fila,columna])
     if tablero[fila-1][columna] not in "_-|o*+/": #Arriba
         posVisitables.append(Nodo([fila-1,columna], nodo, nodo.g + 1))
     if tablero[fila][columna+1] not in "_-|o*+/": #Derecha
@@ -473,7 +497,7 @@ def borrarRecorrido():
 
 def dibujarRuta(camino):
     global tablero
-    posTaxi = getPosicion('T')
+    posTaxi = getPosicion(simboloTaxi)
     llego = False
     for i in range(0,len(camino)-1):
         if llego:
@@ -482,7 +506,7 @@ def dibujarRuta(camino):
             llego = True
 
 def moverseAPosicion(posDestino): #A*
-    start = Nodo(getPosicion('T'))
+    start = Nodo(getPosicion(simboloTaxi))
     open = [start]
     closed = []
     start.g = 0
@@ -532,7 +556,7 @@ def parquear(posCuadra):
     borrarRuta()
     borrarRecorrido()
     dejarDePasear()
-    posicionActual = getPosicion('T')
+    posicionActual = getPosicion(simboloTaxi)
     destino = posCuadra
     if estaDejandoCliente:
         #ENTONCES posCuadra es la ubicación exacta donde el cliente quiere llegar
@@ -566,11 +590,14 @@ def parquear(posCuadra):
             imprimirTablero(posicion)
 
 def dejarCliente(posCuadra): #Alternativa de pasear
+    global simboloTaxi
     tablero[posCuadra[0]][posCuadra[1]] = '☻'
-    imprimirTablero(getPosicion('T'))
+    imprimirTablero(getPosicion(simboloTaxi))
     time.sleep(1.5)
+    simboloTaxi = simboloTaxiLibre
+    actualizarSimboloTaxi()
     tablero[posCuadra[0]][posCuadra[1]] = '-'
-    imprimirTablero(getPosicion('T'))
+    imprimirTablero(getPosicion(simboloTaxi))
 
 def getClientesOriginales():
     listaPosiciones = []
@@ -600,27 +627,37 @@ def cambiarVelocidad(velocidad):
         desactivarMostrarRecorrido()
         desactivarMostrarRuta()
         detenerse = True
-        imprimirTablero(getPosicion('T'))
+        imprimirTablero(getPosicion(simboloTaxi))
         velocidadAnimacion = 500
     else:
         detenerse = False
         velocidadAnimacion = velocidad
 
-global tablero
-global listaClientes
-global mostrarCaminoRecorrido
-global mostrarRuta
-global velocidadAnimacion
-global detenerse
-global estaDejandoCliente
+def main():
+    global tablero
+    global listaClientes
+    global mostrarCaminoRecorrido
+    global mostrarRuta
+    global velocidadAnimacion
+    global detenerse
+    global estaDejandoCliente
+    global simboloTaxi
+    global simboloTaxiLibre
+    global simboloTaxiOcupado
 
-estaDejandoCliente = False
-detenerse = False
-velocidadAnimacion = 500
-mostrarCaminoRecorrido = False
-mostrarRuta = False
-listaClientes = []
-tablero = getTablero()
-asignarDestinosAClientes()
-mostrarPanel()
+    simboloTaxiOcupado = '♥'
+    simboloTaxiLibre = 'T'
+    simboloTaxi = simboloTaxiLibre
 
+    estaDejandoCliente = False
+    detenerse = False
+    velocidadAnimacion = 500
+    mostrarCaminoRecorrido = False
+    mostrarRuta = False
+    listaClientes = []
+    tablero = getTablero()
+    if tablero != None:
+        asignarDestinosAClientes()
+        mostrarPanel()
+
+main()
