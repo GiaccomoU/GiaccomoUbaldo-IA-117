@@ -10,21 +10,59 @@ class Cliente:
         self.posicion = posicion
         self.destino = destino
 
-
+class Nodo:
+    def __init__(self, posicion, parent=None, g=None):
+        self.posicion = posicion
+        self.g = g
+        self.f = None
+        self.parent = parent
 
 def mostrarPanel():
     global tablero
     top = Tk()
-    top.geometry("300x300")
+    top.geometry("100x80")
     #L1 = Label(top, text="Instrucción: ")
     #L1.pack(side=LEFT)
-    #E1 = Entry(top, bd=5)
-    #E1.pack(side=RIGHT)
-    B1 = Button(top, text="Pasear", command= lambda: mandar(1))
-    B1.place(x=80, y=80)
-    B2 = Button(top, text="Dejar de Pasear", command=dejarDePasear)
-    B2.place(x=50, y=50)
+    E1 = Entry(top, bd=5)
+    E1.pack(side=TOP)
+    B3 = Button(top, text="Ejecutar", command=lambda: ejecutar(E1.get()))
+    B3.place(x=40, y=40)
     top.mainloop()
+
+def ejecutar(comando):
+    if type(comando) == str:
+        comando = comando.split(" ")
+        if comando[0] == "clientes": # CLIENTES N
+            cantidad = int(comando[1])
+            agregarClientesAleatorios(cantidad)
+        if comando[0] == "cliente": # CLIENTE CUADRA DESTINO
+            nombreOrigen = comando[1]
+            nombreDestino = comando[2]
+            agregarClienteNuevo(nombreOrigen, nombreDestino)
+        if comando[0] == "pasear": # PASEAR
+            t3 = Thread(target=pasear)
+            t3.daemon = True
+            t3.start()
+        if comando[0] == "parar": # PARAR
+            dejarDePasear()
+        if comando[0] == "parquear": # PARQUEAR CUADRA
+            cuadra = comando[1]
+            t2 = Thread(target=parquear, args=[cuadra])
+            t2.daemon = True
+            t2.start()
+        if comando[0] == "mostrar":
+            if comando[1] == "on":
+                activarMostrarRecorrido()
+            elif comando[1] == "off":
+                desactivarMostrarRecorrido()
+        if comando[0] == "ruta":
+            if comando[1] == "on":
+                activarMostrarRuta()
+            elif comando[1] == "off":
+                desactivarMostrarRuta()
+        if comando[0] == "animar":
+            cambiarVelocidad(int(comando[1]))
+
 
 def getTablero():
     with open("entrada.txt") as f:
@@ -97,14 +135,15 @@ def llenarEspacios(tablero):
         for j in range(0, len(linea)):
             #print("khe")
             if term == True:
-                linea[j] = '*'
+                linea[j] = ' '
             if(tablero[i][j] == '\n'):
-                linea[j] = '*'
+                linea[j] = ' '
                 term = True
         tablero[i] = linea
     return tablero
 
-def getPosicion(nombre, tablero):
+def getPosicion(nombre):
+    global tablero
     for i in range(0, len(tablero)):
         for j in range(0, len(tablero[i])):
             if tablero[i][j] == nombre:
@@ -119,7 +158,7 @@ def sonVecinos(posA, posB):
     else:
         return False
 
-def getPosicionesVisitables(tablero, posicion):
+def getPosicionesVisitables(posicion):
     posVisitables = []
     fila = posicion[0]
     columna = posicion[1]
@@ -145,9 +184,26 @@ def imprimirTablero(posicion):
                 tablero[i][j] = 'T'
                 print('T', end='')
             else:
-                if tablero[i][j] == 'T': #Si es el taxi
+                if tablero[i][j] == 'T':
                     print(' ', end='')
                     tablero[i][j] = ' '
+                else:
+                    print(tablero[i][j], end='')
+        print("\n",end='')
+
+def imprimirTableroConCamino(posicion):
+    clear = lambda: os.system('cls')
+    clear()
+    global tablero
+    for i in range(0, len(tablero)):
+        for j in range(0, len(tablero[i])):
+            if i == posicion[0] and j == posicion[1]:
+                tablero[i][j] = 'T'
+                print('T', end='')
+            else:
+                if tablero[i][j] == 'T':
+                    print('*', end='')
+                    tablero[i][j] = '*'
                 else:
                     print(tablero[i][j], end='')
         print("\n",end='')
@@ -162,29 +218,39 @@ def dejarDePasear():
     global seguirPaseando
     seguirPaseando = False
 
-def mandar(opcion):
-    if opcion == 1:
-        t2 = Thread(target=pasear)
-        t2.daemon = True
-        t2.start()
+def activarMostrarRecorrido():
+    global mostrarCaminoRecorrido
+    mostrarCaminoRecorrido = True
+
+def desactivarMostrarRecorrido():
+    global mostrarCaminoRecorrido
+    mostrarCaminoRecorrido = False
+
+def activarMostrarRuta():
+    global mostrarRuta
+    mostrarRuta = True
+
+def desactivarMostrarRuta():
+    global mostrarRuta
+    mostrarRuta = False
 
 def pasear():
     global tablero
     explorados = []
 
-    elegido = getPosicion('T', tablero)
+    elegido = getPosicion('T')
     global seguirPaseando
     seguirPaseando = True
 
     while seguirPaseando:
         posActual = elegido
         explorados.append(posActual)
-        time.sleep(0.5)
+        time.sleep(velocidadAnimacion/1000)
         imprimirTablero(posActual)
         global posTaxi
         posTaxi = posActual
 
-        vecinos = getPosicionesVisitables(tablero, posActual)
+        vecinos = getPosicionesVisitables(posActual)
         if todosLosVecinosExplorados(vecinos, explorados):
             del explorados[:]
 
@@ -192,15 +258,240 @@ def pasear():
         while(elegido in explorados):
             elegido = vecinos[randint(0, len(vecinos) - 1)]
 
+def detener():
+    global detenerse
+    detenerse = True
 
-'''
+def getPosicionesDeClientesPosibles():
+    listaPosiciones = []
+    for i in range(0, len(tablero)):
+        for j in range(0, len(tablero[i])):
+            #print(tablero[i][j])
+            if tablero[i][j] == '-':
+                listaPosiciones.append([i, j])
+    return listaPosiciones
+
+def agregarClienteATablero(cliente):
+    global tablero
+    posicion = cliente.posicion
+    #print(posicion)
+    tablero[posicion[0]][posicion[1]] = 'o'
+
 def agregarClientesAleatorios(cantidad):
+    global listaClientes
+    posPosibles = getPosicionesDeClientesPosibles()
     for i in range(0, cantidad):
-        posicion = [randint(), randint()]
-        while(tablero[posicion[0]][posicion[1]] == 'o'):
-            random =
+        posicionCliente = [-1,-1]
+        destino = [-1, -1]
+        while(posicionCliente == destino):
+            posicionCliente = posPosibles[randint(0, len(posPosibles)-1)]
+            destino = posPosibles[randint(0, len(posPosibles)-1)]
+        cliente = Cliente(posicionCliente, destino)
+        listaClientes.append(cliente)
+        agregarClienteATablero(cliente)
+    imprimirTablero(getPosicion('T'))
 
-'''
+def getUbicacionesPosiblesEnCuadra(nombreCuadra):
+    global tablero
+    posicion = getPosicion(nombreCuadra)
+    listaUbicaciones = []
+    listaUbicaciones.append([posicion[0] - 1, posicion[1] - 1])
+    listaUbicaciones.append([posicion[0] - 1, posicion[1]])
+    listaUbicaciones.append([posicion[0] - 1, posicion[1] + 1])
+    listaUbicaciones.append([posicion[0] + 1, posicion[1] - 1])
+    listaUbicaciones.append([posicion[0] + 1, posicion[1]])
+    listaUbicaciones.append([posicion[0] + 1, posicion[1] + 1])
+    return listaUbicaciones
+
+def agregarClienteNuevo(nombreCuadra, nombreDestino):
+    ubicacionesPosibles = getUbicacionesPosiblesEnCuadra(nombreCuadra)
+    ubicacionExacta = ubicacionesPosibles[randint(0,len(ubicacionesPosibles)-1)]
+
+    destinosPosibles = getUbicacionesPosiblesEnCuadra(nombreDestino)
+    destinoExacto = destinosPosibles[randint(0, len(destinosPosibles) - 1)]
+
+    cliente = Cliente(ubicacionExacta, destinoExacto)
+    global listaClientes
+    listaClientes.append(cliente)
+    agregarClienteATablero(cliente)
+    imprimirTablero(getPosicion('T7'))
+
+def distanciaEntrePosiciones(posA, posB):
+    distancia = abs(posA[0]-posB[0]) + abs(posA[1]-posB[1])
+    return distancia
+
+def eliminarNodo(nodoAEliminar, lista):
+    for i in range(0, len(lista)-1):
+        if lista[i].posicion == nodoAEliminar.posicion:
+            del lista[i]
+    return lista
+
+def getNodoMenosCostoso(lista):
+    nodoMenosCostoso = None
+    costo = 999999
+    for nodo in lista:
+        if nodo.f < costo:
+            nodoMenosCostoso = nodo
+            costo = nodo.f
+    return nodoMenosCostoso
+
+def nodoEstaEnLista(nodo, lista):
+    for i in lista:
+        if i.posicion == nodo.posicion:
+            return True
+    return False
+
+def getNodoEnLista(nodo, lista):
+    for i in lista:
+        if i.posicion == nodo.posicion:
+            return i
+    print("NO SE ENCONTRÓ EL NODO")
+
+def getNodosVecinos(nodo):
+    posVisitables = []
+    fila = nodo.posicion[0]
+    columna = nodo.posicion[1]
+    if tablero[fila-1][columna] not in "_-|o*+/": #Arriba
+        posVisitables.append(Nodo([fila-1,columna], nodo, nodo.g + 1))
+    if tablero[fila][columna+1] not in "_-|o*+/": #Derecha
+        posVisitables.append(Nodo([fila,columna+1], nodo, nodo.g + 1))
+    if tablero[fila+1][columna] not in "_-|o*+/": #Abajo
+        posVisitables.append(Nodo([fila+1,columna], nodo, nodo.g + 1))
+    if tablero[fila][columna-1] not in "_-|o*+/": #Izquierda
+        posVisitables.append(Nodo([fila,columna-1], nodo, nodo.g + 1))
+    return posVisitables
+
+def construirCamino(nodo):
+    camino = [nodo.posicion]
+    while nodo.parent != None:
+        nodo = nodo.parent
+        camino.append(nodo.posicion)
+    return camino
+
+def borrarRuta():
+    global tablero
+    for i in range(0, len(tablero) - 1):
+        for j in range(0, len(tablero[i]) - 1):
+            if tablero[i][j] == '+':
+                tablero[i][j] = ' '
+
+def borrarRecorrido():
+    global tablero
+    for i in range(0, len(tablero) - 1):
+        for j in range(0, len(tablero[i]) - 1):
+            if tablero[i][j] == '*':
+                tablero[i][j] = ' '
+
+def dibujarRuta(camino):
+    global tablero
+    posTaxi = getPosicion('T')
+    llego = False
+    for i in range(0,len(camino)-1):
+        if llego:
+            tablero[camino[i][0]][camino[i][1]] = '+'
+        if  camino[i] == posTaxi:
+            llego = True
+
+def moverseAPosicion(posDestino): #A*
+    start = Nodo(getPosicion('T'))
+    open = [start]
+    closed = []
+    start.g = 0
+    start.f = start.g + distanciaEntrePosiciones(start.posicion, posDestino)
+    while open != []:
+        current = getNodoMenosCostoso(open)
+        if current.posicion == posDestino:
+            return construirCamino(current)
+        open = eliminarNodo(current, open)
+        closed.append(current)
+        vecinos = getNodosVecinos(current)
+        for vecino in vecinos:
+            if not nodoEstaEnLista(vecino, closed):
+                vecino.f = vecino.g + distanciaEntrePosiciones(vecino.posicion, posDestino)
+                if not nodoEstaEnLista(vecino, open):
+                    open.append(vecino)
+                else:
+                    openVecino = getNodoEnLista(vecino, open)
+                    if vecino.g < openVecino.g:
+                        openVecino.g = vecino.g
+                        openVecino.parent = vecino.parent
+    return False
+
+def parquear(nombreCuadra):
+    detenerse = False
+    posicionActual = getPosicion('T')
+    destino = getPosicion(nombreCuadra)
+    destinoArriba = [destino[0]-2, destino[1]]
+    destinoAbajo = [destino[0]+2, destino[1]]
+    distanciaArriba = distanciaEntrePosiciones(posicionActual, destinoArriba)
+    distanciaAbajo = distanciaEntrePosiciones(posicionActual, destinoAbajo)
+    if distanciaAbajo > distanciaArriba:
+        destino = destinoArriba
+    else:
+        destino = destinoAbajo
+    caminoMasCorto = list(reversed(moverseAPosicion(destino)))
+    #print(caminoMasCorto)
+    for posicion in caminoMasCorto:
+        time.sleep(velocidadAnimacion/1000)
+        if(detenerse):
+            break
+        if(mostrarRuta):
+            dibujarRuta(caminoMasCorto)
+        else:
+            borrarRuta()
+
+        if(mostrarCaminoRecorrido):
+            imprimirTableroConCamino(posicion)
+        else:
+            borrarRecorrido()
+            imprimirTablero(posicion)
+
+def getClientesOriginales():
+    listaPosiciones = []
+    for i in range(0, len(tablero)-1):
+        for j in range(0, len(tablero[i])):
+            if tablero[i][j] == 'o':
+                listaPosiciones.append([i, j])
+    return listaPosiciones
+
+def asignarDestinosAClientes():
+    global listaClientes
+    posicionesClientes = getClientesOriginales()
+    posPosibles = getPosicionesDeClientesPosibles()
+    for posCliente in posicionesClientes:
+        destino = [-1,-1]
+        while (posCliente == destino):
+            destino = [randint(0, len(posPosibles) - 1)]
+        cliente = Cliente(posCliente, destino)
+        listaClientes.append(cliente)
+        agregarClienteATablero(cliente)
+
+def cambiarVelocidad(velocidad):
+    global detenerse
+    global velocidadAnimacion
+    if velocidad == 0:
+        dejarDePasear()
+        desactivarMostrarRecorrido()
+        desactivarMostrarRuta()
+        detenerse = True
+        imprimirTablero(getPosicion('T'))
+        velocidadAnimacion = 500
+    else:
+        detenerse = False
+        velocidadAnimacion = velocidad
+
 global tablero
+global listaClientes
+global mostrarCaminoRecorrido
+global mostrarRuta
+global velocidadAnimacion
+global detenerse
+detenerse = False
+velocidadAnimacion = 500
+mostrarCaminoRecorrido = False
+mostrarRuta = False
+listaClientes = []
 tablero = getTablero()
+asignarDestinosAClientes()
 mostrarPanel()
+
