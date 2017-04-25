@@ -67,10 +67,9 @@ def ejecutar(comando):
         if comando[0] == "animar":
             cambiarVelocidad(int(comando[1]))
         if comando[0] == "buscar":
-            t4 = Thread(target=buscarClientes)
+            t4 = Thread(target=buscarTodosLosClientes)
             t4.daemon = True
             t4.start()
-
 
 def getTablero():
     with open("entrada.txt") as f:
@@ -272,41 +271,49 @@ def pasear():
         while(elegido in explorados):
             elegido = vecinos[randint(0, len(vecinos) - 1)]
 
+def dejarDeBuscar():
+    global seguirBuscando
+    seguirBuscando = False
+
+def buscarTodosLosClientes():
+    global seguirBuscando
+    seguirBuscando = True
+
+    while seguirBuscando or len(listaClientes) == 0:
+        buscarClientes()
+
 def buscarClientes():
     global tablero
     explorados = []
     elegido = getPosicion(simboloTaxi)
-    global seguirBuscando
-    seguirBuscando = True
-
     while seguirBuscando:
         posActual = elegido
         if tablero[posActual[0]-1][posActual[1]] == 'o':
             dejarDePasear()
             posCliente = [posActual[0]-1,posActual[1]]
             llevarClienteADestino(posCliente)
-            seguirBuscando = False
+            #seguirBuscando = False
             break
 
         elif tablero[posActual[0]][posActual[1]+1] == 'o':
             dejarDePasear()
             posCliente = [posActual[0],posActual[1]+1]
             llevarClienteADestino(posCliente)
-            seguirBuscando = False
+            #seguirBuscando = False
             break
 
         elif tablero[posActual[0]+1][posActual[1]] == 'o':
             dejarDePasear()
             posCliente = [posActual[0]+1,posActual[1]]
             llevarClienteADestino(posCliente)
-            seguirBuscando = False
+            #seguirBuscando = False
             break
 
         elif tablero[posActual[0]][posActual[1]-1] == 'o':
             dejarDePasear()
             posCliente = [posActual[0],posActual[1]-1]
             llevarClienteADestino(posCliente)
-            seguirBuscando = False
+            #seguirBuscando = False
             break
 
         explorados.append(posActual)
@@ -356,6 +363,17 @@ def actualizarSimboloTaxi():
                 break
     #print("El nuevo simbolo del taxi es: " + simboloTaxi)
 
+def eliminarCliente(posicion, destino):
+    global listaClientes
+    global seguirBuscando
+    if len(listaClientes) == 1:
+        seguirBuscando = False
+    for i in range(0, len(listaClientes)):
+        if listaClientes[i].posicion == posicion:
+            del listaClientes[i]
+            break
+
+
 def llevarClienteADestino(posicionCliente):
     global tablero
     global estaDejandoCliente
@@ -369,6 +387,7 @@ def llevarClienteADestino(posicionCliente):
     print("El destino del cliente es: " + str(destinoCliente))
     parquear(destinoCliente)
     dejarCliente(destinoCliente)
+    eliminarCliente(posicionCliente, destinoCliente)
 
 def detener():
     global detenerse
@@ -401,6 +420,7 @@ def agregarClientesAleatorios(cantidad):
         cliente = Cliente(posicionCliente, destino)
         listaClientes.append(cliente)
         agregarClienteATablero(cliente)
+
     imprimirTablero(getPosicion(simboloTaxi))
 
 def getUbicacionesPosiblesEnCuadra(nombreCuadra):
@@ -612,23 +632,25 @@ def asignarDestinosAClientes():
     posicionesClientes = getClientesOriginales()
     posPosibles = getPosicionesDeClientesPosibles()
     for posCliente in posicionesClientes:
-        destino = [-1,-1]
+        destino = posCliente
         while (posCliente == destino):
-            destino = [randint(0, len(posPosibles) - 1)]
+            destino = posPosibles[randint(0, len(posPosibles) - 1)]
         cliente = Cliente(posCliente, destino)
         listaClientes.append(cliente)
-        agregarClienteATablero(cliente)
+        #agregarClienteATablero(cliente)
 
 def cambiarVelocidad(velocidad):
     global detenerse
     global velocidadAnimacion
+    global seguirBuscando
+
     if velocidad == 0:
         dejarDePasear()
         desactivarMostrarRecorrido()
         desactivarMostrarRuta()
         detenerse = True
+        dejarDeBuscar()
         imprimirTablero(getPosicion(simboloTaxi))
-        velocidadAnimacion = 500
     else:
         detenerse = False
         velocidadAnimacion = velocidad
