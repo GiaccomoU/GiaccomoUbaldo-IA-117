@@ -189,8 +189,6 @@ def getPosicionesVisitables(posicion):
     return posVisitables
 
 def imprimirTablero(posicion):
-    clear = lambda: os.system('cls')
-    clear()
     global tablero
     for i in range(0, len(tablero)):
         for j in range(0, len(tablero[i])):
@@ -446,7 +444,7 @@ def agregarClienteNuevo(nombreCuadra, nombreDestino):
     global listaClientes
     listaClientes.append(cliente)
     agregarClienteATablero(cliente)
-    imprimirTablero(getPosicion('T7'))
+    imprimirTablero(getPosicion('T'))
 
 def distanciaEntrePosiciones(posA, posB):
     distancia = abs(posA[0]-posB[0]) + abs(posA[1]-posB[1])
@@ -680,6 +678,6 @@ def main():
     tablero = getTablero()
     if tablero != None:
         asignarDestinosAClientes()
+        imprimirTablero(getPosicion(simboloTaxi))
         mostrarPanel()
-
 main()
