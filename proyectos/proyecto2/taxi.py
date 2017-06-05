@@ -286,7 +286,7 @@ def seguirBuscando(taxi, ciudad):
             elegido = vecinos[randint(0, len(vecinos) - 1)]
         taxi.posicionActual = elegido
 
-def agregarTaxis(numeroDeTaxis, ciudad, simbolo):
+def agregarTaxis(numeroDeTaxis, ciudad, simbolo): #agregar taxis aleetorios
     espaciosDisponibles = getPosicionesLibres(ciudad)
     for i in range(0, numeroDeTaxis):
         if espaciosDisponibles == []:
@@ -297,6 +297,53 @@ def agregarTaxis(numeroDeTaxis, ciudad, simbolo):
         taxiNuevo = Taxi(espacioLibre.posicion, False, simbolo)
         ciudad.taxis.append(taxiNuevo)
         ciudad.mapa[espacioLibre.posicion[0]][espacioLibre.posicion[1]] = simbolo
+
+def tieneCallesArriba(posicion, tablero):
+    if tablero[posicion[0] - 1][posicion[1] - 1] in "o-":
+        if tablero[posicion[0] - 1][posicion[1]] in "o-":
+            if tablero[posicion[0] - 1][posicion[1] + 1] in "o-":
+                return True
+            else:
+                return False
+        else:
+            return False
+    else:
+        return False
+
+def tieneCallesAbajo(posicion, tablero):
+    if tablero[posicion[0] + 1][posicion[1] - 1] in "o-":
+        if tablero[posicion[0] + 1][posicion[1]] in "o-":
+            if tablero[posicion[0] + 1][posicion[1] + 1] in "o-":
+                return True
+            else:
+                return False
+        else:
+            return False
+    else:
+        return False
+
+def tieneParedes(posicion, tablero):
+    if tablero[posicion[0]][posicion[1] - 1] == "|":
+        if tablero[posicion[0]][posicion[1] + 1] == "|":
+            return True
+        else:
+            return False
+    else:
+        return False
+
+def esEdificio(posicion, tablero):
+    esValida = tieneCallesAbajo(posicion, tablero) and tieneCallesArriba(posicion, tablero)
+    esValida = esValida and tieneParedes(posicion, tablero)
+    if esValida:
+        return True
+    else:
+        return False
+
+def esObstaculo(posicion, tablero):
+    if tablero[posicion[0]][posicion[1]] in "-|_o":
+        return True
+    else:
+        return False
 
 def crearCiudad(tablero):
     taxis = []
@@ -309,7 +356,12 @@ def crearCiudad(tablero):
         for j in range(0, len(i)):
             posActual = [i,j]
             if esEdificio(posActual, tablero):
-                cantidadDeHabitantes = getCantidadHabitantes(posEdificio)
+                try:
+                    cantidadDeHabitantes = int(tablero[i][j])
+                except:
+                    print("ERROR: CARACTER DE CANTIDAD DE HABITANTES INVALIDA")
+                    cantidadDeHabitantes = -1
+
                 if cantidadDeHabitantes == 0:
                     trabajos.append(EdificioTrabajo(posActual))
                 elif cantidadDeHabitantes > 0 and cantidadDeHabitantes < 10:
@@ -320,19 +372,18 @@ def crearCiudad(tablero):
 
             else:
                 if not esObstaculo(posActual, tablero):
-                    if esTaxi(posActual, tablero):
-                        taxis.append(Taxi(posActual, False, 'T'))
-                        espacios.append(Espacio(1, 0, posActual))
+                    if tablero[i][j] == " ":
+                        espacios.append(Espacio(0, 0, posActual))
                     else:
-                        espacios.append(Espacio(0, 0, posActual)) #AQUI FALTA AGREGAR LA CONDICION DE QUE YA HAYAN TAXIS ENCIMA
-                                                                # Y QUE POR ENDE AGREGUEN CONGESTIONAMIENTO AL CONSTRUCTOR
+                        taxis.append(Taxi(posActual, False, tablero[i][j]))
+                        espacios.append(Espacio(1, 0, posActual))
 
-    for edificio in edificios:
-        if edificio.tipo == "vivienda":
-            for i in range(0, edificio.cantidadHabitantes):
-                personas.append(Cliente(edificio.posicion, edificio.posicion, #HACER SUBCLASES VIVIENDA Y TRABAJO MAS FACIL))
+    for vivienda in viviendas:
+        for i in range(0, vivienda.cantidadHabitantes):
+            trabajoAleatorio = trabajos[randint(0, len(trabajos)-1)]
+            personas.append(Cliente(vivienda.posicion, vivienda, trabajoAleatorio)) #HACER SUBCLASES VIVIENDA Y TRABAJO MAS FACIL))
 
-    # posicionActual, vivienda, trabajo, horaTrabajo
+    # posicionActual, vivienda, trabajo, horaTrabajo=uniform(0.2, 0.35))
     #(self, mapa, taxis, personas, edificiosTrabajo, edificiosVivienda, espacios, tiempo=Tiempo(120, [0.2, 0.3], [0.7, 0.8])):
 
 
