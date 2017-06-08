@@ -89,7 +89,6 @@ class Edificio:
         #self.cantidadHabitantes = cantidadHabitantes
         #self.tipo = tipo #VIVIENDA O TRABAJO
 
-
 class EdificioVivienda(Edificio):
     def __init__(self, posicion, cantidadHabitantes):
         super(EdificioVivienda, self).__init__(posicion)
@@ -98,7 +97,6 @@ class EdificioVivienda(Edificio):
 class EdificioTrabajo(Edificio):
     def __init__(self, posicion):
         super(EdificioTrabajo, self).__init__(posicion)
-
 
 class Nodo:
     def __init__(self, posicion, parent=None, g=None):
@@ -352,24 +350,25 @@ def crearCiudad(tablero):
     trabajos = []
     espacios = []
 
-    for i in range(0, len(tablero)):
-        for j in range(0, len(i)):
+    for i in range(0, len(tablero)-1):
+        for j in range(0, len(tablero[i])-1):
             posActual = [i,j]
             if esEdificio(posActual, tablero):
-                try:
-                    cantidadDeHabitantes = int(tablero[i][j])
-                except:
-                    print("ERROR: CARACTER DE CANTIDAD DE HABITANTES INVALIDA")
-                    cantidadDeHabitantes = -1
-
-                if cantidadDeHabitantes == 0:
-                    trabajos.append(EdificioTrabajo(posActual))
-                elif cantidadDeHabitantes > 0 and cantidadDeHabitantes < 10:
-                    viviendas.append(EdificioVivienda(posActual, cantidadDeHabitantes))
-                else:
-                    print("ERROR: CANTIDAD DE HABITANTES INVÁLIDA")
-                    return -1
-
+                if tablero[i][j] == " ":
+                    cantidadDeHabitantes = 0
+                else: 
+                    try:
+                        cantidadDeHabitantes = int(tablero[i][j])
+                        if cantidadDeHabitantes == 0:
+                            trabajos.append(EdificioTrabajo(posActual))
+                        elif cantidadDeHabitantes > 0 and cantidadDeHabitantes < 10:
+                            viviendas.append(EdificioVivienda(posActual, cantidadDeHabitantes))
+                        else:
+                            print("ERROR: CANTIDAD DE HABITANTES INVÁLIDA")
+                            return -1
+                    except:
+                        print("ERROR: CARACTER DE CANTIDAD DE HABITANTES INVALIDA")
+                        cantidadDeHabitantes = -1
             else:
                 if not esObstaculo(posActual, tablero):
                     if tablero[i][j] == " ":
@@ -381,14 +380,9 @@ def crearCiudad(tablero):
     for vivienda in viviendas:
         for i in range(0, vivienda.cantidadHabitantes):
             trabajoAleatorio = trabajos[randint(0, len(trabajos)-1)]
-            personas.append(Cliente(vivienda.posicion, vivienda, trabajoAleatorio)) #HACER SUBCLASES VIVIENDA Y TRABAJO MAS FACIL))
-
-    # posicionActual, vivienda, trabajo, horaTrabajo=uniform(0.2, 0.35))
-    #(self, mapa, taxis, personas, edificiosTrabajo, edificiosVivienda, espacios, tiempo=Tiempo(120, [0.2, 0.3], [0.7, 0.8])):
-
+            personas.append(Cliente(vivienda.posicion, vivienda, trabajoAleatorio)) #HACER SUBCLASES VIVIENDA Y TRABAJO 
 
     nuevaCiudad = Ciudad(tablero, taxis, personas, trabajos, viviendas, espacios)
-
     return nuevaCiudad
 
 
@@ -414,16 +408,17 @@ def getTablero():
     else:
         return tab
 
-def imprimirTablero(ciudad):
-    for i in range(0, len(ciudad.mapa)):
-        for j in range(0, len(ciudad.mapa[i])):
-            print(ciudad.mapa[i][j], end='')
+def imprimirTablero(tablero):
+    for i in range(0, len(tablero)):
+        for j in range(0, len(tablero[i])):
+            print(tablero[i][j], end='')
         print("\n", end='')
 
 def main():
     tablero = getTablero()
-    ciudad = Ciudad(tablero)
-    imprimirTablero(ciudad)
+    ciudad = crearCiudad(tablero)
+    imprimirTablero(ciudad.mapa)
+
     '''
         if tablero != None:
         asignarDestinosAClientes()
