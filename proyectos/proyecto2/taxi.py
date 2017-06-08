@@ -67,8 +67,17 @@ class Tiempo:
         self.rangoIda = rangoIda
         self.rangoVuelta = rangoVuelta
 
-    def getHoraSalidaAlTrabajo(self):
+    def getInicioSalidaAlTrabajo(self):
         return self.rangoIda[0] * self.duracionDia
+
+    def getFinSalidaAlTrabajo(self):
+        return self.rangoIda[1] * self.duracionDia
+
+    def getInicioSalidaDelTrabajo(self):
+        return self.rangoVuelta[0] * self.duracionDia
+
+    def getFinSalidaDelTrabajo(self):
+        return self.rangoVuelta[1] * self.duracionDia
 
 class Ciudad:
     def __init__(self, mapa, taxis, personas, edificiosTrabajo, edificiosVivienda, espacios, tiempo=Tiempo(120, [0.2, 0.3], [0.7, 0.8])):
@@ -419,11 +428,28 @@ def imprimirTablero(tablero):
         print("\n", end='')
 
 def iniciarSimulacion(ciudad):
-    tiempoActual = ciudad.tiempo.getHoraSalidaAlTrabajo()
-    tiempo = time.time() #comienzo
+    
+    inicioSalidaAlTrabajo = ciudad.tiempo.getInicioSalidaAlTrabajo() #120 * 0.2 = 24
+    finSalidaAlTrabajo = ciudad.tiempo.getFinSalidaAlTrabajo() #120 * 0.3 = 36
 
-    while tiempoActual >= ciudad.tiempo.rangoIda[0] and tiempoActual <= ciudad.tiempo.rangoIda[1]:
-        print("Hola mundo")
+    inicioSalidaDelTrabajo = ciudad.tiempo.getInicioSalidaDelTrabajo() 
+    finSalidaDelTrabajo = ciudad.tiempo.getFinSalidaDelTrabajo() 
+
+    duracionDia = ciudad.tiempo.duracionDia # 120
+    
+    tiempoActual = 0
+    tiempo = time.time() #comienzo 0
+
+    while tiempoActual < duracionDia:
+    
+        while tiempoActual >= inicioSalidaAlTrabajo and tiempoActual < finSalidaAlTrabajo:
+            print("Saliendo a trabajar")
+            tiempoActual = time.time() - tiempo
+
+        while tiempoActual >= inicioSalidaDelTrabajo and tiempoActual < finSalidaDelTrabajo:
+            print("Volviendo de  trabajar")
+            tiempoActual = time.time() - tiempo
+
         tiempoActual = time.time() - tiempo
 
 def main():
@@ -440,4 +466,3 @@ def main():
     '''
 
 main()
-
