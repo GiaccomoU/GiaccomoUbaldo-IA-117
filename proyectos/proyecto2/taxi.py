@@ -1,5 +1,6 @@
 from random import randint
 from random import uniform
+import time
 
 class Cliente:
     def __init__(self, posicionActual, vivienda, trabajo, horaTrabajo=uniform(0.2, 0.35)):
@@ -65,6 +66,9 @@ class Tiempo:
         self.duracionDia = duracionDia
         self.rangoIda = rangoIda
         self.rangoVuelta = rangoVuelta
+
+    def getHoraSalidaAlTrabajo(self):
+        return self.rangoIda[0] * self.duracionDia
 
 class Ciudad:
     def __init__(self, mapa, taxis, personas, edificiosTrabajo, edificiosVivienda, espacios, tiempo=Tiempo(120, [0.2, 0.3], [0.7, 0.8])):
@@ -355,7 +359,7 @@ def crearCiudad(tablero):
             posActual = [i,j]
             if esEdificio(posActual, tablero):
                 if tablero[i][j] == " ":
-                    cantidadDeHabitantes = 0
+                    trabajos.append(EdificioTrabajo(posActual))
                 else: 
                     try:
                         cantidadDeHabitantes = int(tablero[i][j])
@@ -414,10 +418,19 @@ def imprimirTablero(tablero):
             print(tablero[i][j], end='')
         print("\n", end='')
 
+def iniciarSimulacion(ciudad):
+    tiempoActual = ciudad.tiempo.getHoraSalidaAlTrabajo()
+    tiempo = time.time() #comienzo
+
+    while tiempoActual >= ciudad.tiempo.rangoIda[0] and tiempoActual <= ciudad.tiempo.rangoIda[1]:
+        print("Hola mundo")
+        tiempoActual = time.time() - tiempo
+
 def main():
     tablero = getTablero()
     ciudad = crearCiudad(tablero)
     imprimirTablero(ciudad.mapa)
+    iniciarSimulacion(ciudad)
 
     '''
         if tablero != None:
@@ -427,3 +440,4 @@ def main():
     '''
 
 main()
+
