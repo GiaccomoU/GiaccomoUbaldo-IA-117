@@ -127,7 +127,7 @@ class Ciudad:
 
             if taxi.tieneCliente():
                 if taxi.caminoActual == []: #Llego a su destino
-                    
+                    #DEJARCLIENTE()
                 else:
                     self.moverTaxiAPosicion(taxi, taxi.caminoActual[0])
                     taxi.caminoActual = taxi.caminoActual[1:]
@@ -178,9 +178,9 @@ class Ciudad:
         taxi.clienteActual = cliente
 
         if clienteEnCasa:
-            posLlegada = getPosicionMasCercana(taxi.posicionActual, getPosicionesEdificio(cliente.vivienda))
+            posLlegada = getPosicionMasCercana(taxi.posicionActual, getPosicionesParqueoEdificio(cliente.vivienda))
         else:
-            posLlegada = getPosicionMasCercana(taxi.posicionActual, getPosicionesEdificio(cliente.trabajo))
+            posLlegada = getPosicionMasCercana(taxi.posicionActual, getPosicionesParqueoEdificio(cliente.trabajo))
 
         taxi.caminoActual = rutaMasCorta(self.mapa, taxi.posicionActual, posLlegada)
 
@@ -336,6 +336,16 @@ def getPosicionesEdificio(posEdificio):
     posiciones.append([posEdificio[0] + 1, posEdificio[1] - 1])
     posiciones.append([posEdificio[0] + 1, posEdificio[1]])
     posiciones.append([posEdificio[0] + 1, posEdificio[1] + 1])
+    return posiciones
+
+def getPosicionesParqueoEdificio(posEdificio):
+    posiciones = []
+    posiciones.append([posEdificio[0] - 2, posEdificio[1] - 1])
+    posiciones.append([posEdificio[0] - 2, posEdificio[1]])
+    posiciones.append([posEdificio[0] - 2, posEdificio[1] + 1])
+    posiciones.append([posEdificio[0] + 2, posEdificio[1] - 1])
+    posiciones.append([posEdificio[0] + 2, posEdificio[1]])
+    posiciones.append([posEdificio[0] + 2, posEdificio[1] + 1])
     return posiciones
 
 def getPosicionesLibres(ciudad):
