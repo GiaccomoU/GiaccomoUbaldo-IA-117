@@ -3,11 +3,12 @@ from random import uniform
 import time
 
 class Cliente:
-    def __init__(self, posicionActual, vivienda, trabajo, horaTrabajo=uniform(0.2, 0.35)):
+    def __init__(self, posicionActual, vivienda, trabajo, horaTrabajo, tiempoTrabajo=0.4):
+        self.posicionActual = posicionActual
         self.vivienda = vivienda
         self.trabajo = trabajo
         self.horaTrabajo = horaTrabajo #porcentaje
-        self.posicionActual = posicionActual
+        self.tiempoTrabajo = tiempoTrabajo #porcentaje
 
     def estaEnElTrabajo(self):
         if self.posicionActual == [self.trabajo[0] - 1, self.trabajo[1] - 1]:
@@ -356,7 +357,7 @@ def esObstaculo(posicion, tablero):
     else:
         return False
 
-def crearCiudad(tablero):
+def crearCiudad(tablero, rangoIda):
     taxis = []
     personas = []
     viviendas = []
@@ -393,7 +394,10 @@ def crearCiudad(tablero):
     for vivienda in viviendas:
         for i in range(0, vivienda.cantidadHabitantes):
             trabajoAleatorio = trabajos[randint(0, len(trabajos)-1)]
-            personas.append(Cliente(vivienda.posicion, vivienda, trabajoAleatorio)) #HACER SUBCLASES VIVIENDA Y TRABAJO 
+            horaDeEntradaAleatoria = uniform(rangoIda[0], rangoIda[1])
+            nuevoCliente = Cliente(vivienda.posicion, vivienda, trabajoAleatorio, horaDeEntradaAleatoria)
+            print(nuevoCliente.horaTrabajo)
+            personas.append(nuevoCliente) #HACER SUBCLASES VIVIENDA Y TRABAJO 
 
     nuevaCiudad = Ciudad(tablero, taxis, personas, trabajos, viviendas, espacios)
     return nuevaCiudad
@@ -427,6 +431,34 @@ def imprimirTablero(tablero):
             print(tablero[i][j], end='')
         print("\n", end='')
 
+#######################################################################################
+
+def sacarClientesATrabajar(ciudad, hora):
+    print("se dio la hora: " + str(hora))
+    duracionDia = ciudad.tiempo.duracionDia
+    for persona in ciudad.personas:
+        horaDeTrabajo = persona.horaTrabajo*duracionDia
+        if  horaDeTrabajo <= hora and esEdificio(persona.posicionActual, ciudad.mapa):
+            print("sacare un cliente")
+            sacarClienteAfuera(ciudad, persona)
+    #imprimirTablero(ciudad.mapa)
+
+def getPosicionesAceraEdificio(posEdificio):
+    posiciones = []
+    posiciones.append([posEdificio[0] - 1, posEdificio[1] - 1])
+    posiciones.append([posEdificio[0] - 1, posEdificio[1]])
+    posiciones.append([posEdificio[0] - 1, posEdificio[1] + 1])
+    posiciones.append([posEdificio[0] + 1, posEdificio[1] - 1])
+    posiciones.append([posEdificio[0] + 1, posEdificio[1]])
+    posiciones.append([posEdificio[0] + 1, posEdificio[1] + 1])
+    return posiciones
+
+def sacarClienteAfuera(ciudad, persona):
+    posicionesDisponibles = getPosicionesAceraEdificio(persona.posicionActual)
+    posElegida = posicionesDisponibles[randint(0, len(posicionesDisponibles)-1)]
+    ciudad.mapa[posElegida[0]][posElegida[1]] = "o"
+    persona.posicionActual = posElegida
+
 def iniciarSimulacion(ciudad):
     
     inicioSalidaAlTrabajo = ciudad.tiempo.getInicioSalidaAlTrabajo() #120 * 0.2 = 24
@@ -443,18 +475,27 @@ def iniciarSimulacion(ciudad):
     while tiempoActual < duracionDia:
     
         while tiempoActual >= inicioSalidaAlTrabajo and tiempoActual < finSalidaAlTrabajo:
-            print("Saliendo a trabajar")
+            #print("Saliendo a trabajar")
+            sacarClientesATrabajar(ciudad, tiempoActual)
+            imprimirTablero(ciudad.mapa)
             tiempoActual = time.time() - tiempo
+
+
+
+        #HACER QUE LOS TAXIS EMPIECEN A BUSCAR CLIENTES
+        # PROBABLMENTE SEA MEJOR QUE SUS UBIACIONES CAMBIEN EN OTRO THREAD
+
 
         while tiempoActual >= inicioSalidaDelTrabajo and tiempoActual < finSalidaDelTrabajo:
             print("Volviendo de  trabajar")
             tiempoActual = time.time() - tiempo
 
         tiempoActual = time.time() - tiempo
+        imprimirTablero(ciudad.mapa)
 
 def main():
     tablero = getTablero()
-    ciudad = crearCiudad(tablero)
+    ciudad = crearCiudad(tablero, [0.2, 0.3]) # HACER QUE ESTOS PARAMETROS SEAN TOMADOS DESDE ARCHIVO DE CONFIGURACION
     imprimirTablero(ciudad.mapa)
     iniciarSimulacion(ciudad)
 
