@@ -49,10 +49,12 @@ class Cliente:
             return self.trabajo
 
 class Taxi:
-    def __init__(self, posicionActual, tieneCliente, simbolo):
+    def __init__(self, posicionActual, tieneCliente, simboloLibre, simboloOcupado):
         self.posicionActual = posicionActual
         self.tieneCliente = tieneCliente
-        self.simbolo = simbolo
+        self.simboloActual = simboloLibre
+        self.simboloLibre = simboloLibre
+        self.simboloOcupado = simboloOcupado
         self.caminoActual = None
         self.caminoRecorrido = [] # Lista de explorados para evitar repetir caminos
 
@@ -96,6 +98,77 @@ class Ciudad:
                 return cliente
         print("No se encontró al cliente con esa posición.")
         return None #No se encontró
+
+    def sacarClienteAfuera(self, persona):
+        posicionesDisponibles = getPosicionesAceraEdificio(persona.posicionActual)
+        posElegida = posicionesDisponibles[randint(0, len(posicionesDisponibles)-1)]
+        self.mapa[posElegida[0]][posElegida[1]] = "o"
+        persona.posicionActual = posElegida
+
+    def sacarClientesATrabajar(self, hora):
+        print("se dio la hora: " + str(hora))
+        duracionDia = self.tiempo.duracionDia
+        for persona in self.personas:
+            horaDeTrabajo = persona.horaTrabajo*duracionDia
+            if  horaDeTrabajo <= hora and esEdificio(persona.posicionActual, self.mapa):
+                print("sacare un cliente")
+                self.sacarClienteAfuera(persona)
+        #imprimirTablero(ciudad.mapa)
+
+    def moverTaxis(self):
+        for taxi in self.taxis:
+            posTaxi = taxi.posicionActual
+
+            if taxi.tieneCliente:
+                
+            else:
+
+                if tablero[posTaxi[0] - 1][posTaxi[1]] == 'o':
+                    cliente = getClientePorPosicion([posTaxi[0] - 1, posTaxi[1]])
+                    self.recogerCliente(taxi, cliente)
+
+                elif tablero[posTaxi[0]][posTaxi[1] + 1] == 'o':
+                    cliente = getClientePorPosicion([posTaxi[0], posTaxi[1] + 1])
+                    self.recogerCliente(taxi, cliente)
+
+                elif tablero[posTaxi[0] + 1][posTaxi[1]] == 'o':
+                    cliente = getClientePorPosicion([posTaxi[0] + 1, posTaxi[1]])
+                    self.recogerCliente(taxi, cliente)
+
+                elif tablero[posTaxi[0]][posTaxi[1] - 1] == 'o':
+                    cliente = getClientePorPosicion([posTaxi[0], posTaxi[1] - 1])
+                    self.recogerCliente(taxi, cliente)
+                else:
+                    taxi.caminoRecorrido.append(posTaxi)
+                    vecinos = getPosicionesVisitables(posActual, self)
+
+                    if listaEsSubconjunto(vecinos, taxi.caminoRecorrido):
+                        del taxi.caminoRecorrido[:]
+
+                    posicionNueva = vecinos[randint(0, len(vecinos) - 1)]
+                    while (posicionNueva in taxi.caminoRecorrido):
+                        posicionNueva = vecinos[randint(0, len(vecinos) - 1)]
+
+                    self.moverTaxiAPosicion(taxi, posicionNueva)
+
+    def moverTaxiAPosicion(self, taxi, posicionNueva):  #HAY QUE IMPRIMIR EL TABLERO, LEYENDO POSICIONES, DESPUES DE MOVER TAXIS PARA QUE TAXIS QUE SE ATRAVIESEN NO SE BORREN ENTRE SI
+        posVieja = taxi.posicionActual
+        self.mapa[posVieja[0]][posVieja[1]] = " "  
+        self.mapa[posicionNueva[0]][posicionNueva[1]] = taxi.simboloActual
+
+    def recogerCliente(taxi, cliente):
+        self.mapa[cliente.posicionActual[0]][cliente.posicionActual[1]] = '-'
+        cliente.posicionActual = taxi.posicionActual
+        taxi.simboloActual = taxi.simboloOcupado
+        taxi.tieneCliente = True
+
+    def getClientePorPosicion(self, posicionCliente):
+        for persona in self.personas:
+             if persona.posicionActual == posicionCliente:
+                return persona
+        print("No se encontró al cliente con la posición: " + str(posicionCliente))
+        return None
+
 
 class Edificio:
     def __init__(self, posicion):
@@ -197,17 +270,17 @@ def rutaMasCorta(mapa, posInicial, posDestino): #A*
                         openVecino.parent = vecino.parent
     return False
 
-def getPosicionesVisitables(posicion, mapa):
+def getPosicionesVisitables(posicion, ciudad):
     posVisitables = []
     fila = posicion[0]
     columna = posicion[1]
-    if mapa[fila-1][columna] not in "_-|o*+/T": #Arriba
+    if ciudad.mapa[fila-1][columna] not in "_-|o*+/": #Arriba
         posVisitables.append([fila-1,columna])
-    if mapa[fila][columna+1] not in "_-|o*+/T": #Derecha
+    if ciudad.mapa[fila][columna+1] not in "_-|o*+/": #Derecha
         posVisitables.append([fila,columna+1])
-    if mapa[fila+1][columna] not in "_-|o*+/T": #Abajo
+    if ciudad.mapa[fila+1][columna] not in "_-|o*+/": #Abajo
         posVisitables.append([fila+1,columna])
-    if mapa[fila][columna-1] not in "_-|o*+/T": #Izquierda
+    if ciudad.mapa[fila][columna-1] not in "_-|o*+/": #Izquierda
         posVisitables.append([fila,columna-1])
     return posVisitables
 
@@ -402,7 +475,6 @@ def crearCiudad(tablero, rangoIda):
     nuevaCiudad = Ciudad(tablero, taxis, personas, trabajos, viviendas, espacios)
     return nuevaCiudad
 
-
 #######################################################################################
 
 def llenarEspacios(tablero):
@@ -433,16 +505,6 @@ def imprimirTablero(tablero):
 
 #######################################################################################
 
-def sacarClientesATrabajar(ciudad, hora):
-    print("se dio la hora: " + str(hora))
-    duracionDia = ciudad.tiempo.duracionDia
-    for persona in ciudad.personas:
-        horaDeTrabajo = persona.horaTrabajo*duracionDia
-        if  horaDeTrabajo <= hora and esEdificio(persona.posicionActual, ciudad.mapa):
-            print("sacare un cliente")
-            sacarClienteAfuera(ciudad, persona)
-    #imprimirTablero(ciudad.mapa)
-
 def getPosicionesAceraEdificio(posEdificio):
     posiciones = []
     posiciones.append([posEdificio[0] - 1, posEdificio[1] - 1])
@@ -452,12 +514,6 @@ def getPosicionesAceraEdificio(posEdificio):
     posiciones.append([posEdificio[0] + 1, posEdificio[1]])
     posiciones.append([posEdificio[0] + 1, posEdificio[1] + 1])
     return posiciones
-
-def sacarClienteAfuera(ciudad, persona):
-    posicionesDisponibles = getPosicionesAceraEdificio(persona.posicionActual)
-    posElegida = posicionesDisponibles[randint(0, len(posicionesDisponibles)-1)]
-    ciudad.mapa[posElegida[0]][posElegida[1]] = "o"
-    persona.posicionActual = posElegida
 
 def iniciarSimulacion(ciudad):
     
@@ -476,11 +532,9 @@ def iniciarSimulacion(ciudad):
     
         while tiempoActual >= inicioSalidaAlTrabajo and tiempoActual < finSalidaAlTrabajo:
             #print("Saliendo a trabajar")
-            sacarClientesATrabajar(ciudad, tiempoActual)
+            ciudad.sacarClientesATrabajar(tiempoActual)
             imprimirTablero(ciudad.mapa)
             tiempoActual = time.time() - tiempo
-
-
 
         #HACER QUE LOS TAXIS EMPIECEN A BUSCAR CLIENTES
         # PROBABLMENTE SEA MEJOR QUE SUS UBIACIONES CAMBIEN EN OTRO THREAD
@@ -490,6 +544,7 @@ def iniciarSimulacion(ciudad):
             print("Volviendo de  trabajar")
             tiempoActual = time.time() - tiempo
 
+        ciudad.moverTaxis()
         tiempoActual = time.time() - tiempo
         imprimirTablero(ciudad.mapa)
 
