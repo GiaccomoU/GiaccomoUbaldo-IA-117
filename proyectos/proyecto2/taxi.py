@@ -80,10 +80,11 @@ class Espacio:
         self.congestionamiento = congestionamiento
 
 class Tiempo:
-    def __init__(self, duracionDia, rangoIda, rangoVuelta):
+    def __init__(self, duracionDia, rangoIda, rangoVuelta, velocidadAnimacion):
         self.duracionDia = duracionDia
         self.rangoIda = rangoIda
         self.rangoVuelta = rangoVuelta
+        self.velocidadAnimacion = velocidadAnimacion
 
     def getInicioSalidaAlTrabajo(self):
         return self.rangoIda[0] * self.duracionDia
@@ -98,7 +99,7 @@ class Tiempo:
         return self.rangoVuelta[1] * self.duracionDia
 
 class Ciudad:
-    def __init__(self, mapa, taxis, personas, edificiosTrabajo, edificiosVivienda, espacios, tiempo=Tiempo(120, [0.2, 0.3], [0.7, 0.8])):
+    def __init__(self, mapa, taxis, personas, edificiosTrabajo, edificiosVivienda, espacios, tiempo=Tiempo(120, [0.2, 0.3], [0.7, 0.8], 1)):
         self.mapa = mapa
         self.taxis = taxis
         self.personas = personas
@@ -121,6 +122,16 @@ class Ciudad:
             if  horaDeTrabajo <= hora and esEdificio(persona.posicionActual, self.mapa):
                 self.sacarClienteAfuera(persona)
         #imprimirTablero(ciudad.mapa)
+
+    def sacarClientesDeTrabajar(self, hora):
+        print("se dio la hora: " + str(hora))
+        duracionDia = self.tiempo.duracionDia
+        for persona in self.personas:
+            horaDeSalida = persona.horaTrabajo*duracionDia + persona.tiempoTrabajo*duracionDia
+            if  horaDeSalida <= hora and esEdificio(persona.posicionActual, self.mapa):
+                self.sacarClienteAfuera(persona)
+        #imprimirTablero(ciudad.mapa)
+
 
     def moverTaxis(self):
         for taxi in self.taxis:
@@ -202,8 +213,6 @@ class Ciudad:
     			self.mapa[persona.posicionActual[0]][persona.posicionActual[1]] == 'o'
     	for taxi in self.taxis:
     		self.mapa[taxi.posicionActual[0]][taxi.posicionActual[1]] == taxi.simboloActual
-
-
 
 class Edificio:
     def __init__(self, posicion):
@@ -288,7 +297,6 @@ def rutaMasCorta(mapa, posInicial, posDestino): #A*
     start.g = 0
     start.f = start.g + distanciaEntrePosiciones(start.posicion, posDestino)
     while open != []:
-        #print("Me encicle jejepz")
         current = getNodoMenosCostoso(open)
         if current.posicion == posDestino:
             return construirCamino(current)
@@ -447,7 +455,7 @@ def esObstaculo(posicion, tablero):
     else:
         return False
 
-def crearCiudad(tablero, rangoIda):
+def crearCiudad(tablero, rangoIda, velocidadAnimacion):
     taxis = []
     personas = []
     viviendas = []
@@ -550,24 +558,28 @@ def iniciarSimulacion(ciudad):
     while tiempoActual < duracionDia:
     
         while tiempoActual >= inicioSalidaAlTrabajo and tiempoActual < finSalidaAlTrabajo:
-            #print("Saliendo a trabajar")
             ciudad.sacarClientesATrabajar(tiempoActual)
             imprimirTablero(ciudad.mapa)
             tiempoActual = time.time() - tiempo
-
+            time.sleep(ciudad.tiempo.velocidadAnimacion)
+            ciudad.moverTaxis()
 
         while tiempoActual >= inicioSalidaDelTrabajo and tiempoActual < finSalidaDelTrabajo:
-            print("Volviendo de  trabajar")
+            ciudad.sacarClientesDeTrabajar(tiempoActual)
+            imprimirTablero(ciudad.mapa)
             tiempoActual = time.time() - tiempo
+            time.sleep(ciudad.tiempo.velocidadAnimacion)
+            ciudad.moverTaxis()
 
         ciudad.moverTaxis()
         ciudad.refrescarTablero()
         tiempoActual = time.time() - tiempo
+        time.sleep(ciudad.tiempo.velocidadAnimacion)
         imprimirTablero(ciudad.mapa)
 
 def main():
     tablero = getTablero()
-    ciudad = crearCiudad(tablero, [0.2, 0.3]) # HACER QUE ESTOS PARAMETROS SEAN TOMADOS DESDE ARCHIVO DE CONFIGURACION
+    ciudad = crearCiudad(tablero, [0.2, 0.3], 0.5) # HACER QUE ESTOS PARAMETROS SEAN TOMADOS DESDE ARCHIVO DE CONFIGURACION
     imprimirTablero(ciudad.mapa)
     #print(rutaMasCorta(ciudad.mapa, [1,1], [17,27]))
     iniciarSimulacion(ciudad)
