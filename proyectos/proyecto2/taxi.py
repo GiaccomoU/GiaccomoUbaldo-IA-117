@@ -113,7 +113,7 @@ class Tiempo:
         return self.rangoVuelta[1] * self.duracionDia
 
 class Ciudad:
-    def __init__(self, mapa, taxis, personas, edificiosTrabajo, edificiosVivienda, espacios, tiempo=Tiempo(120, [0.2, 0.3], [0.7, 0.8], 1), diasPasados=0):
+    def __init__(self, mapa, taxis, personas, edificiosTrabajo, edificiosVivienda, espacios, tiempo=Tiempo(120, [0.2, 0.3], [0.7, 0.8], 1), diasPasados=0, tiempoMapaCongestionamiento=10):
         self.mapa = mapa
         self.taxis = taxis
         self.personas = personas
@@ -122,6 +122,8 @@ class Ciudad:
         self.tiempo = tiempo
         self.espacios = espacios
         self.diasPasados = diasPasados
+        self.mapasHechos = 0
+        self.tiempoMapaCongestionamiento = tiempoMapaCongestionamiento
 
     def sacarClienteAfuera(self, persona):
         posicionesDisponibles = getPosicionesAceraEdificio(persona.posicionActual)
@@ -253,7 +255,7 @@ class Ciudad:
                     if taxi.tiempoCongestionado == 0:
                         taxi.tiempoCongestionado = espacio.cantidadDeCarros
                     else:
-                    	taxi.tiempoCongestionado -= 1
+                        taxi.tiempoCongestionado -= 1
 
     def getTaxisEnPosicion(self, posicion):
         taxisEnPosicion = []
@@ -262,19 +264,30 @@ class Ciudad:
                 taxisEnPosicion.append(taxi)
         return taxisEnPosicion
         
-    def getTiempoConcurrido(self):
-    	return self.diasPasados*self.tiempo.duracionDia
+    def getTiempoConcurrido(self, tiempoTranscurrido):
+        segundosTotales = self.diasPasados*self.tiempo.duracionDia + tiempoTranscurrido
+        minutos = segundosTotales // 60
+        segundos = segundosTotales % 60
+        return str(int(minutos)) + ":" + str(int(segundos))
 
-    def generarMapaDeCongestionamiento(self, nombreArchivo):
-        file = open(“testfile.txt”,”w”) 
+    def generarMapaDeCongestionamiento(self, nombreArchivo, tiempoTranscurrido):
+        for espacio in self.espacios:
+            if espacio.cantidadDeCarros == 0:
+                self.mapa[espacio.posicion[0]][espacio.posicion[1]] = " "
+            else:
+                self.mapa[espacio.posicion[0]][espacio.posicion[1]] = str(espacio.cantidadDeCarros)
  
-        for i in range(0, len(tablero)):
-            for j in range(0, len(tablero[i])):
-                impresion += tablero[i][j]
+        file = open(nombreArchivo,"w") 
+        file.write(self.getTiempoConcurrido(tiempoTranscurrido) + str("\n"))
+        impresion = ""
+        for i in range(0, len(self.mapa)):
+            for j in range(0, len(self.mapa[i])):
+                impresion += self.mapa[i][j]
             impresion += "\n"
         file.write(impresion)
 
         file.close() 
+        self.refrescarTablero()
 
 
 class Edificio:
@@ -619,6 +632,9 @@ def simularDia(ciudad):
     tiempo = time.time() #comienzo 0
 
     while tiempoActual < duracionDia:
+        if int(tiempoActual) % ciudad.tiempoMapaCongestionamiento == 0:
+     	   ciudad.generarMapaDeCongestionamiento("mapaCongestionamiento" + str(ciudad.mapasHechos) + ".txt", tiempoActual)
+     	   ciudad.mapasHechos += 1
     
         while tiempoActual >= inicioSalidaAlTrabajo and tiempoActual < finSalidaAlTrabajo:
             ciudad.sacarClientesATrabajar(tiempoActual)
