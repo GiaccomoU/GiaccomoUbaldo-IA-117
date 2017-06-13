@@ -113,7 +113,7 @@ class Tiempo:
         return self.rangoVuelta[1] * self.duracionDia
 
 class Ciudad:
-    def __init__(self, mapa, taxis, personas, edificiosTrabajo, edificiosVivienda, espacios, tiempo=Tiempo(120, [0.2, 0.3], [0.7, 0.8], 1), diasPasados=0, tiempoMapaCongestionamiento=10):
+    def __init__(self, mapa, taxis, personas, edificiosTrabajo, edificiosVivienda, espacios, tiempo, tiempoMapaCongestionamiento):
         self.mapa = mapa
         self.taxis = taxis
         self.personas = personas
@@ -121,7 +121,7 @@ class Ciudad:
         self.edificiosVivienda = edificiosVivienda
         self.tiempo = tiempo
         self.espacios = espacios
-        self.diasPasados = diasPasados
+        self.diasPasados = 0
         self.mapasHechos = 0
         self.tiempoMapaCongestionamiento = tiempoMapaCongestionamiento
 
@@ -288,7 +288,6 @@ class Ciudad:
 
         file.close() 
         self.refrescarTablero()
-
 
 class Edificio:
     def __init__(self, posicion):
@@ -531,12 +530,19 @@ def esObstaculo(posicion, tablero):
     else:
         return False
 
-def crearCiudad(tablero, rangoIda, velocidadAnimacion):
+def crearCiudad(tablero, archivoConfiguracion):
     taxis = []
     personas = []
     viviendas = []
     trabajos = []
     espacios = []
+
+    rangoIda = getRangoIda(archivoConfiguracion)
+    velocidadAnimacion = getVelocidadAnimacion(archivoConfiguracion)
+    tiempoTrabajo = getTiempoTrabajo(archivoConfiguracion)
+    duracionDia = getDuracionDia(archivoConfiguracion)
+    rangoVuelta = getRangoVuelta(archivoConfiguracion)
+    tiempoMapaCongestionamiento = getTiempoMapaCongestionamiento(archivoConfiguracion)
 
     for i in range(0, len(tablero)-1):
         for j in range(0, len(tablero[i])-1):
@@ -569,11 +575,12 @@ def crearCiudad(tablero, rangoIda, velocidadAnimacion):
         for i in range(0, vivienda.cantidadHabitantes):
             trabajoAleatorio = trabajos[randint(0, len(trabajos)-1)]
             horaDeEntradaAleatoria = uniform(rangoIda[0], rangoIda[1])
-            nuevoCliente = Cliente(vivienda.posicion, vivienda, trabajoAleatorio, horaDeEntradaAleatoria)
+            nuevoCliente = Cliente(vivienda.posicion, vivienda, trabajoAleatorio, horaDeEntradaAleatoria, tiempoTrabajo)
             print(nuevoCliente.horaTrabajo)
-            personas.append(nuevoCliente) #HACER SUBCLASES VIVIENDA Y TRABAJO 
+            personas.append(nuevoCliente) 
 
-    nuevaCiudad = Ciudad(tablero, taxis, personas, trabajos, viviendas, espacios)
+    tiempoAUsar = Tiempo(duracionDia, rangoIda, rangoVuelta, velocidadAnimacion)
+    nuevaCiudad = Ciudad(tablero, taxis, personas, trabajos, viviendas, espacios, tiempoAUsar, tiempoMapaCongestionamiento)
     return nuevaCiudad
 
 #######################################################################################
@@ -605,6 +612,52 @@ def imprimirTablero(tablero):
             impresion += tablero[i][j]
         impresion += "\n"
     print(impresion)
+
+#######################################################################################
+
+def getRangoIda(nombreArchivo):
+    with open(nombreArchivo) as f:
+        for line in f:
+            line = line.split("=")
+            if line[0] == "RangoIda":
+                rango = line[1][1:].split("]")[0].split(",")
+                return [float(rango[0]), float(rango[1])]
+
+def getVelocidadAnimacion(nombreArchivo):
+    with open(nombreArchivo) as f:
+        for line in f:
+            line = line.split("=")
+            if line[0] == "VelocidadAnimacion":
+                return float(line[1])    
+
+def getTiempoTrabajo(nombreArchivo):
+    with open(nombreArchivo) as f:
+        for line in f:
+            line = line.split("=")
+            if line[0] == "TiempoTrabajo":
+                return float(line[1])    
+
+def getTiempoMapaCongestionamiento(nombreArchivo):
+    with open(nombreArchivo) as f:
+        for line in f:
+            line = line.split("=")
+            if line[0] == "TiempoMapaCongestionamiento":
+                return float(line[1])   
+
+def getDuracionDia(nombreArchivo):
+    with open(nombreArchivo) as f:
+        for line in f:
+            line = line.split("=")
+            if line[0] == "DuracionDia":
+                return float(line[1])    
+
+def getRangoVuelta(nombreArchivo):
+    with open(nombreArchivo) as f:
+        for line in f:
+            line = line.split("=")
+            if line[0] == "RangoVuelta":
+                rango = line[1][1:].split("]")[0].split(",")
+                return [float(rango[0]), float(rango[1])]
 
 #######################################################################################
 
@@ -661,18 +714,11 @@ def simularDia(ciudad):
 
 def main():
     tablero = getTablero()
-    ciudad = crearCiudad(tablero, [0.2, 0.3], 0.5) # HACER QUE ESTOS PARAMETROS SEAN TOMADOS DESDE ARCHIVO DE CONFIGURACION
+    ciudad = crearCiudad(tablero, "ajustesTaxi.txt") # HACER QUE ESTOS PARAMETROS SEAN TOMADOS DESDE ARCHIVO DE CONFIGURACION
     imprimirTablero(ciudad.mapa)
-    #print(rutaMasCorta(ciudad.mapa, [1,1], [17,27]))
+
     while True:
         simularDia(ciudad)
         ciudad.diasPasados += 1
-
-    '''
-        if tablero != None:
-        asignarDestinosAClientes()
-        imprimirTablero(getPosicion(simboloTaxi))
-        mostrarPanel()
-    '''
 
 main()
