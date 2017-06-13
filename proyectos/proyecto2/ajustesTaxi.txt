@@ -1,0 +1,6 @@
+RangoIda=[0.2,0.3]
+VelocidadAnimacion=1.0
+TiempoTrabajo=0.4
+DuracionDia=120
+RangoVuelta=[0.7,0.8]
+TiempoMapaCongestionamiento=10.0
